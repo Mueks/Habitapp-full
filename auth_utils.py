@@ -1,7 +1,6 @@
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status
 from sqlmodel import Session
 from jose import JWTError, jwt
-
 
 from database import get_session
 from models import User
@@ -20,23 +19,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
 
     try:
-        # Decodificar el token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        # El ID del usuario está en el campo "sub" (subject) del token
         user_id_str: str | None = payload.get("sub")
         if user_id_str is None:
             raise credentials_exception
 
-        # Usamos nuestro modelo Pydantic para validar los datos
         token_data = TokenData(user_id=int(user_id_str))
-
     except JWTError:
         raise credentials_exception
 
     if token_data.user_id is None:
         raise credentials_exception
 
-    # Obtener el usuario de la base de datos
     user = db.get(User, token_data.user_id)
 
     if user is None:

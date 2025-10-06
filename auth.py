@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 import os
 from fastapi import APIRouter, Depends, HTTPException, status
 # from fastapi.responses import RedirectResponse
@@ -21,7 +22,9 @@ oauth.register(
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
     client_kwargs={
-        "scope": "openid email profile",
+        "scope": "openid email profile https://www.googleapis.com/auth/calendar",
+        "prompt": "consent",
+        "access_type": "offline",
     }
 )
 
@@ -34,7 +37,12 @@ async def login_via_google(request: Request):
     Redirect a Google para iniciar sesión.
     """
     redirect_uri = request.url_for("auth_via_google")
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    return await oauth.google.authorize_redirect(
+        request,
+        redirect_uri,
+        access_type="offline",
+        prompt="consent"
+    )
 
 
 @router.get("/callback")
@@ -80,7 +88,18 @@ async def auth_via_google(request: Request, db: Session = Depends(get_session)):
         db.commit()
         db.refresh(db_user)
 
+    db_user.google_access_token = token.get('access_token')
+    if token.get('refresh_token'):
+        db_user.google_refresh_token = token.get('refresh_token')
+
+    expires_in = token.get('expires_in', 0)
+    db_user.google_token_expires_at = datetime.now(
+        timezone.utc) + timedelta(seconds=expires_in)
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
     jwt_tokens = create_jwt_tokens(user_id=db_user.id)
 
-    # El frontend recibirá este JSON y deberá guardar los tokens.
     return jwt_tokens

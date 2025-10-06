@@ -8,6 +8,8 @@ from models import User, Habit, HabitCompletion
 from auth_utils import get_current_user
 from schemas import HabitCompletionCreate, HabitCreate, HabitRead, HabitUpdate, HabitCompletionRead, HabitTrack
 
+from calendar_services import create_calendar_event_for_habit
+
 router = APIRouter(prefix="/habits", tags=["Habits"])
 
 
@@ -33,7 +35,7 @@ def get_valid_habit_for_user(
 
 
 @router.post("/", response_model=HabitRead)
-def create_habit(
+async def create_habit(
     *,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -44,6 +46,10 @@ def create_habit(
     session.add(habit)
     session.commit()
     session.refresh(habit)
+
+    if habit_in.sync_to_calendar:
+        await create_calendar_event_for_habit(current_user, habit, date.today())
+
     return habit
 
 
@@ -65,14 +71,16 @@ def get_habit_by_id(habit: Habit = Depends(get_valid_habit_for_user)):
     return habit
 
 
-@router.put("/{habit_id}", response_model=HabitRead)
+@router.patch("/{habit_id}", response_model=HabitRead)
 def update_habit_by_id(
     *,
     session: Session = Depends(get_session),
     habit_in: HabitUpdate,
     habit: Habit = Depends(get_valid_habit_for_user)
 ):
-    """Actualiza un hábito por su ID usando la dependencia."""
+    """
+    Actualiza parcialmente un hábito por su ID.
+    """
     update_data = habit_in.model_dump(exclude_unset=True)
     habit.sqlmodel_update(update_data)
     session.add(habit)
@@ -98,7 +106,7 @@ def delete_habit_by_id(
 def mark_habit_as_complete(
     *,
     session: Session = Depends(get_session),
-    # Reutilizamos nuestra dependencia
+
     habit: Habit = Depends(get_valid_habit_for_user),
     completion_in: HabitCompletionCreate
 ):
@@ -106,10 +114,9 @@ def mark_habit_as_complete(
     Marca un hábito como completado para una fecha específica (por defecto, hoy).
     Evita que se marque como completado dos veces en el mismo día.
     """
-    # Si el frontend no especifica una fecha, usamos la de hoy.
+
     completion_date = completion_in.completion_date or date.today()
 
-    # Verificación: ¿Ya está completado para esta fecha?
     statement = select(HabitCompletion).where(
         HabitCompletion.habit_id == habit.id,
         HabitCompletion.completion_date == completion_date
@@ -122,7 +129,6 @@ def mark_habit_as_complete(
             detail="El hábito ya fue marcado como completado para esta fecha."
         )
 
-    # Creamos el nuevo registro de completitud.
     db_completion = HabitCompletion(
         habit_id=habit.id,
         completion_date=completion_date
@@ -147,7 +153,6 @@ def unmark_habit_as_complete(
     """
     target_date = completion_date or date.today()
 
-    # Buscamos el registro de completitud que coincida.
     statement = select(HabitCompletion).where(
         HabitCompletion.habit_id == habit.id,
         HabitCompletion.completion_date == target_date
@@ -173,8 +178,7 @@ def get_habit_completions(
     """
     Obtiene el historial de completitud de un hábito específico.
     """
-    # Gracias a la relación que definimos en el modelo,
-    # simplemente podemos acceder a habit.completions.
+
     return habit.completions
 
 
@@ -191,7 +195,6 @@ def track_habit_progress(
     """
     today = date.today()
 
-    # Buscar si ya existe un registro de completitud para este hábito hoy.
     statement = select(HabitCompletion).where(
         HabitCompletion.habit_id == habit.id,
         HabitCompletion.completion_date == today
@@ -199,11 +202,10 @@ def track_habit_progress(
     db_completion = session.exec(statement).first()
 
     if db_completion:
-        # Si existe, le sumamos el nuevo valor.
-        # Usamos `or 0` por si el valor era None.
+
         db_completion.value = (db_completion.value or 0) + track_in.value
     else:
-        # Si no existe, creamos un nuevo registro.
+
         db_completion = HabitCompletion(
             habit_id=habit.id,
             completion_date=today,

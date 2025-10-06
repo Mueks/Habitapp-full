@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- CONFIGURACIÓN ---
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("No se encontró SECRET_KEY en las variables de entorno")
@@ -19,13 +19,9 @@ REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 días
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
-# --- MODELOS DE DATOS ---
-
 
 class TokenData(BaseModel):
     user_id: int | None = None
-
-# --- FUNCIONES ---
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -34,16 +30,13 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        # Si no se especifica duración, por defecto 30 mins
+
         expire = datetime.now(timezone.utc) + \
             timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
-# --- ¡LA FUNCIÓN QUE FALTABA! ---
-# La añadimos aquí para que esté disponible para ser importada.
 
 
 def create_jwt_tokens(user_id: int) -> dict[str, str]:
@@ -56,17 +49,14 @@ def create_jwt_tokens(user_id: int) -> dict[str, str]:
     Returns:
         Un diccionario que contiene el 'access_token' y el 'refresh_token'.
     """
-    # Creamos el payload del token. El campo 'sub' (subject) es el estándar
-    # para guardar el identificador del usuario.
+
     jwt_payload = {"sub": str(user_id)}
 
-    # Creamos el token de acceso con su duración específica
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data=jwt_payload, expires_delta=access_token_expires
     )
 
-    # Creamos el token de refresco con su duración (más larga)
     refresh_token_expires = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
     refresh_token = create_access_token(
         data=jwt_payload, expires_delta=refresh_token_expires
