@@ -1,0 +1,1 @@
+"Política de Privacidad para Habitapp. Esta aplicación solicita acceso a tu Google Calendar para crear eventos relacionados con tus hábitos. Tu información no se comparte con terceros. Esta aplicación está actualmente en desarrollo."
