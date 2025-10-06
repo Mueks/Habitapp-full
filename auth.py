@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import os
 from fastapi import APIRouter, Depends, HTTPException, status
-# from fastapi.responses import RedirectResponse
 from authlib.integrations.starlette_client import OAuth
 from starlette.requests import Request
 from sqlmodel import Session, select
