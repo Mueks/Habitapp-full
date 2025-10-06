@@ -41,3 +41,8 @@ class HabitCompletionCreate(SQLModel):
 
 class HabitTrack(SQLModel):
     value: int
+
+
+class TokenRefreshResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"

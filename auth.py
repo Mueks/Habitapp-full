@@ -8,7 +8,9 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import User
-from security import create_jwt_tokens
+from security import create_access_token, create_jwt_tokens, oauth2_scheme, SECRET_KEY, ALGORITHM
+from schemas import TokenRefreshResponse
+from jose import jwt, JWTError
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -29,6 +31,41 @@ oauth.register(
 )
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+
+@router.post("/refresh-token", response_model=TokenRefreshResponse)
+def refresh_access_token(
+    session: Session = Depends(get_session),
+    token: str = Depends(oauth2_scheme),
+):
+    """
+    Recibe un refresh_token y devuelve un nuevo access_token.    
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar el refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id_str: str | None = payload.get("sub")
+
+        if user_id_str is None:
+            raise credentials_exception
+
+        user_id = int(user_id_str)
+
+    except JWTError:
+        raise credentials_exception
+
+    user = session.get(User, user_id)
+    if user is None or not user.is_active:
+        raise credentials_exception
+
+    new_access_token = create_access_token(data={"sub": str(user.id)})
+
+    return {"access_token": new_access_token}
 
 
 @router.get('/login')
