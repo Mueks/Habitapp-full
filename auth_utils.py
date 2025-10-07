@@ -4,10 +4,11 @@ from jose import JWTError, jwt
 
 from database import get_session
 from models import User
-from security import SECRET_KEY, ALGORITHM, oauth2_scheme, TokenData
+from security import SECRET_KEY, ALGORITHM, oauth2_scheme, TokenData, security_scheme
+from fastapi.security import HTTPAuthorizationCredentials
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_session)) -> User:
+def get_current_user(creds: HTTPAuthorizationCredentials = Depends(security_scheme), db: Session = Depends(get_session)) -> User:
     """
     Decodifica el token JWT para obtener el ID del usuario, luego busca
     al usuario en la base de datos y lo devuelve.
@@ -18,6 +19,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    token = creds.credentials
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id_str: str | None = payload.get("sub")
@@ -25,6 +28,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise credentials_exception
 
         token_data = TokenData(user_id=int(user_id_str))
+
     except JWTError:
         raise credentials_exception
 

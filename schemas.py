@@ -12,7 +12,7 @@ class HabitBase(SQLModel):
 
 
 class HabitCreate(HabitBase):
-    pass
+    sync_to_calendar: bool = False
 
 
 class HabitUpdate(SQLModel):
@@ -46,3 +46,21 @@ class HabitTrack(SQLModel):
 class TokenRefreshResponse(SQLModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class HabitStats(SQLModel):
+    """
+    Representa las estadísticas calculadas para un hábito.
+    """
+    current_streak: int
+    longest_streak: int
+    total_completions: int
+    completion_dates: list[date]
+
+
+class HabitCompletionBulkCreate(SQLModel):
+    dates: list[date]
+
+
+class BulkResponse(SQLModel):
+    entries_created: int

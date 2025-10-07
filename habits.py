@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from typing import List
-from datetime import date
+from datetime import date, timedelta
 
 from database import get_session
 from models import User, Habit, HabitCompletion
 from auth_utils import get_current_user
-from schemas import HabitCompletionCreate, HabitCreate, HabitRead, HabitUpdate, HabitCompletionRead, HabitTrack
+from schemas import HabitCompletionCreate, HabitCreate, HabitRead, HabitUpdate, HabitCompletionRead, HabitTrack, HabitStats, HabitCompletionBulkCreate, BulkResponse
 
 from calendar_services import create_calendar_event_for_habit
 
@@ -146,7 +146,7 @@ def unmark_habit_as_complete(
     *,
     session: Session = Depends(get_session),
     habit: Habit = Depends(get_valid_habit_for_user),
-    completion_date: date | None = None  # Recibimos la fecha como un query parameter
+    completion_date: date | None = None
 ):
     """
     Elimina el registro de completitud de un hábito para una fecha específica (por defecto, hoy).
@@ -217,3 +217,97 @@ def track_habit_progress(
     session.refresh(db_completion)
 
     return db_completion
+
+
+@router.get("/{habit_id}/stats", response_model=HabitStats)
+def get_habit_stats(
+    habit: Habit = Depends(get_valid_habit_for_user)
+):
+    """
+    Calcula y devuelve estadísticas clave para un hábito específico,
+    como la racha actual, la racha más larga y el total de completitudes.
+    """
+    completion_dates = sorted(
+        list(set(c.completion_date for c in habit.completions)))
+
+    if not completion_dates:
+        return HabitStats(
+            current_streak=0,
+            longest_streak=0,
+            total_completions=0,
+            completion_dates=[]
+        )
+
+    total_completions = len(completion_dates)
+
+    longest_streak = 0
+    current_streak = 0
+
+    if total_completions > 0:
+
+        longest_streak = 1
+        streak_so_far = 1
+
+        for i in range(1, total_completions):
+
+            consecutive_day = completion_dates[i] == completion_dates[i-1] + timedelta(
+                days=1)
+
+            if consecutive_day:
+                streak_so_far += 1
+            else:
+                streak_so_far = 1
+
+            if streak_so_far > longest_streak:
+                longest_streak = streak_so_far
+
+        today = date.today()
+        last_completion_date = completion_dates[-1]
+
+        if last_completion_date == today or last_completion_date == today - timedelta(days=1):
+            current_streak = streak_so_far
+        else:
+            current_streak = 0
+
+    return HabitStats(
+        current_streak=current_streak,
+        longest_streak=longest_streak,
+        total_completions=total_completions,
+        completion_dates=completion_dates
+    )
+
+
+@router.post("/{habit_id}/completions/bulk", response_model=BulkResponse)
+def create_bulk_completions(
+    *,
+    session: Session = Depends(get_session),
+    habit: Habit = Depends(get_valid_habit_for_user),
+    bulk_in: HabitCompletionBulkCreate
+):
+    """
+    Crea múltiples registros de completitud para un hábito a partir de una lista de fechas.
+    Evita la creación de duplicados si una fecha ya está registrada.
+    """
+
+    statement = select(HabitCompletion.completion_date).where(
+        HabitCompletion.habit_id == habit.id)
+    existing_dates = set(session.exec(statement).all())
+
+    new_completions = []
+
+    for completion_date in set(bulk_in.dates):
+        if completion_date not in existing_dates:
+            new_completions.append(
+                HabitCompletion(
+                    habit_id=habit.id,
+                    completion_date=completion_date
+                )
+            )
+
+    if not new_completions:
+        return BulkResponse(entries_created=0)
+
+    session.add_all(new_completions)
+    session.commit()
+
+    return BulkResponse(entries_created=len(new_completions))
