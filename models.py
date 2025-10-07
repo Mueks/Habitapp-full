@@ -1,6 +1,6 @@
 from enum import Enum
 from sqlmodel import Field, Relationship, SQLModel
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, time
 from typing import List, Optional
 
 
@@ -16,6 +16,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     full_name: str
     picture_url: str | None = None
+    timezone: str | None = Field(default=None)
     google_access_token: str | None = Field(default=None)
     google_refresh_token: str | None = Field(default=None, index=True)
     google_token_expires_at: datetime | None = Field(default=None)
@@ -35,6 +36,7 @@ class Habit(SQLModel, table=True):
     target_minutes: int | None = Field(default=None)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
+    scheduled_time: time | None = Field(default=None)
     user_id: int | None = Field(default=None, foreign_key="user.id")
     user: Optional[User] = Relationship(back_populates="habits")
     completions: List["HabitCompletion"] = Relationship(

@@ -1,5 +1,5 @@
-from sqlmodel import SQLModel
-from datetime import date
+from sqlmodel import SQLModel, Field
+from datetime import date, time
 from models import HabitType
 
 
@@ -9,6 +9,7 @@ class HabitBase(SQLModel):
     habit_type: HabitType = HabitType.SIMPLE
     frequency_count: int | None = None
     target_minutes: int | None = None
+    scheduled_time: time | None = None
 
 
 class HabitCreate(HabitBase):
@@ -21,6 +22,8 @@ class HabitUpdate(SQLModel):
     habit_type: HabitType | None = None
     frequency_count: int | None = None
     target_minutes: int | None = None
+
+    scheduled_time: time | None = None
 
 
 class HabitRead(HabitBase):
@@ -64,3 +67,8 @@ class HabitCompletionBulkCreate(SQLModel):
 
 class BulkResponse(SQLModel):
     entries_created: int
+
+
+class UserUpdate(SQLModel):
+    full_name: str | None = Field(default=None, min_length=3)
+    timezone: str | None = Field(default=None, min_length=3)
