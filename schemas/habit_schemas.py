@@ -10,6 +10,7 @@ class HabitBase(SQLModel):
     frequency_count: int | None = None
     target_minutes: int | None = None
     scheduled_time: time | None = None
+    duration_minutes: int | None = 60
 
 
 class HabitCreate(HabitBase):
@@ -22,8 +23,8 @@ class HabitUpdate(SQLModel):
     habit_type: HabitType | None = None
     frequency_count: int | None = None
     target_minutes: int | None = None
-
     scheduled_time: time | None = None
+    duration_minutes: int | None = None
 
 
 class HabitRead(HabitBase):

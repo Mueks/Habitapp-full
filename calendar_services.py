@@ -24,7 +24,8 @@ async def create_calendar_event_for_habit(user: User, habit: Habit, event_date: 
 
     if habit.scheduled_time:
         start_datetime = datetime.combine(event_date, habit.scheduled_time)
-        end_datetime = start_datetime + timedelta(hours=1)
+        duration = habit.duration_minutes or 60
+        end_datetime = start_datetime + timedelta(minutes=duration)
 
         user_timezone = user.timezone or "UTC"
 
@@ -52,7 +53,32 @@ async def create_calendar_event_for_habit(user: User, habit: Habit, event_date: 
         try:
             response = await client.post(events_url, json=event_data, headers=headers)
             response.raise_for_status()
+            event_json = response.json()
             print("Evento de calendario creado exitosamente:", response.json())
+            return event_json.get("id")
         except httpx.HTTPStatusError as e:
             print(
                 f"Error al crear el evento en Google Calendar: {e.response.text}")
+            return None
+
+
+async def delete_calendar_event_for_habit(user: User, event_id: str):
+    """
+    Elimina un evento específico del calendario principal del usuario
+    """
+    if not user.google_access_token:
+        print("El usuario no tiene un token de acceso de Google.")
+        return
+
+    headers = {"Authorization": f"Bearer {user.google_access_token}"}
+    event_url = f"https://www.googleapis.com/calendar/v3/calendars/primary/events/{event_id}"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.delete(event_url, headers=headers)
+            if response.status_code not in [200, 204]:
+                response.raise_for_status()
+            print(f"Evento {event_id} eliminado exitosamente del calendario.")
+        except httpx.HTTPStatusError as e:
+            print(
+                f"Error al eliminar el evento {event_id} de Google Calendar: {e.response.text}")

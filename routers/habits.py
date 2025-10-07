@@ -9,7 +9,7 @@ from models.user_models import User
 from utils.auth_utils import get_current_user
 from schemas.habit_schemas import HabitCompletionCreate, HabitCreate, HabitRead, HabitUpdate, HabitCompletionRead, HabitTrack, HabitStats, HabitCompletionBulkCreate, BulkResponse
 
-from calendar_services import create_calendar_event_for_habit
+from calendar_services import create_calendar_event_for_habit, delete_calendar_event_for_habit
 
 router = APIRouter(prefix="/habits", tags=["Habits"])
 
@@ -44,12 +44,15 @@ async def create_habit(
 ):
     """Crea un nuevo hábito para el usuario autenticado."""
     habit = Habit.model_validate(habit_in, update={"user_id": current_user.id})
+
+    if habit_in.sync_to_calendar:
+        event_id = await create_calendar_event_for_habit(current_user, habit, date.today())
+        if event_id:
+            habit.google_calendar_event_id = event_id
+
     session.add(habit)
     session.commit()
     session.refresh(habit)
-
-    if habit_in.sync_to_calendar:
-        await create_calendar_event_for_habit(current_user, habit, date.today())
 
     return habit
 
@@ -91,12 +94,16 @@ def update_habit_by_id(
 
 
 @router.delete("/{habit_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_habit_by_id(
+async def delete_habit_by_id(
     *,
     session: Session = Depends(get_session),
-    habit: Habit = Depends(get_valid_habit_for_user)  # Y aquí también
+    current_user: User = Depends(get_current_user),
+    habit: Habit = Depends(get_valid_habit_for_user)
 ):
     """Elimina un hábito por su ID usando la dependencia."""
+    if habit.google_calendar_event_id:
+        await delete_calendar_event_for_habit(current_user, habit.google_calendar_event_id)
+
     session.delete(habit)
     session.commit()
 

@@ -22,6 +22,8 @@ class Habit(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
     scheduled_time: time | None = Field(default=None)
+    duration_minutes: int = Field(default=60)
+    google_calendar_event_id: str | None = Field(default=None, index=True)
     user_id: int | None = Field(default=None, foreign_key="user.id")
     user: Optional[User] = Relationship(back_populates="habits")
     completions: List["HabitCompletion"] = Relationship(
