@@ -3,7 +3,7 @@ from sqlmodel import Session
 from jose import JWTError, jwt
 
 from database import get_session
-from models import User
+from models.user_models import User
 from security import SECRET_KEY, ALGORITHM, oauth2_scheme, TokenData, security_scheme
 from fastapi.security import HTTPAuthorizationCredentials
 

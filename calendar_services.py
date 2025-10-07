@@ -1,6 +1,7 @@
 import httpx
-from datetime import date, datetime, timedelta, timezone
-from models import User, Habit
+from datetime import date, datetime, timedelta
+from models.user_models import User
+from models.habit_models import Habit
 
 
 GOOGLE_CALENDAR_API_URL = "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"

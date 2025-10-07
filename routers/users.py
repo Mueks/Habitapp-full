@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
-from models import User
-from auth_utils import get_current_user
-from schemas import UserUpdate
+from models.user_models import User
+from utils.auth_utils import get_current_user
+from schemas.user_schemas import UserUpdate
 from database import get_session
 from sqlmodel import Session
 
