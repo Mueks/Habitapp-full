@@ -4,9 +4,10 @@ from typing import List
 from datetime import date, timedelta
 
 from database import get_session
-from models import User, Habit, HabitCompletion
-from auth_utils import get_current_user
-from schemas import HabitCompletionCreate, HabitCreate, HabitRead, HabitUpdate, HabitCompletionRead, HabitTrack, HabitStats, HabitCompletionBulkCreate, BulkResponse
+from models.habit_models import Habit, HabitCompletion
+from models.user_models import User
+from utils.auth_utils import get_current_user
+from schemas.habit_schemas import HabitCompletionCreate, HabitCreate, HabitRead, HabitUpdate, HabitCompletionRead, HabitTrack, HabitStats, HabitCompletionBulkCreate, BulkResponse
 
 from calendar_services import create_calendar_event_for_habit
 

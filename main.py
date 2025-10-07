@@ -1,6 +1,6 @@
-from auth import router as auth_router
-from users import router as users_router
-from habits import router as habits_router
+from routers.auth import router as auth_router
+from routers.users import router as users_router
+from routers.habits import router as habits_router
 from database import create_db_and_tables
 import os
 from fastapi import FastAPI

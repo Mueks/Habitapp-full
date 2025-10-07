@@ -1,8 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, HTTPBearer
-from jose import JWTError, jwt
+from jose import jwt
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -15,7 +14,7 @@ if not SECRET_KEY:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 días
+REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 

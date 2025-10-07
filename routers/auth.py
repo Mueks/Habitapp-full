@@ -6,9 +6,9 @@ from starlette.requests import Request
 from sqlmodel import Session, select
 
 from database import get_session
-from models import User
+from models.user_models import User
 from security import create_access_token, create_jwt_tokens, oauth2_scheme, SECRET_KEY, ALGORITHM
-from schemas import TokenRefreshResponse
+from schemas.user_schemas import TokenRefreshResponse
 from jose import jwt, JWTError
 
 from dotenv import load_dotenv
